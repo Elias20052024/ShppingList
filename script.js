@@ -57,13 +57,34 @@ function onAddItemSubmit(e) {
   itemInput.value = '';
 }
 
-function addItemDOM(item) {
-  // Create list item
-  const li = document.createElement('li');
-  li.appendChild(document.createTextNode(item)) // Fix: use 'item' instead of 'newItem'
+function addItemDOM(itemObj) {
+  // itemObj can be a string or an object { name, bought }
+  let item, bought;
+  if (typeof itemObj === 'string') {
+    item = itemObj;
+    bought = false;
+  } else {
+    item = itemObj.name;
+    bought = itemObj.bought;
+  }
 
+  const li = document.createElement('li');
+  li.appendChild(document.createTextNode(item));
+
+  // Tick button
+  const tickBtn = createButton('tick-item btn-link');
+  tickBtn.innerHTML = bought
+    ? '<i class="fa-solid fa-check text-green"></i>'
+    : '<i class="fa-regular fa-circle"></i>';
+  li.appendChild(tickBtn);
+
+  // Remove button
   const button = createButton('remove-item btn-link text-red');
   li.appendChild(button);
+
+  if (bought) {
+    li.classList.add('bought');
+  }
 
   // Add li to the DOM
   itemList.appendChild(li);
@@ -86,19 +107,13 @@ function createIcon(classes) {
 }
 function addItemToStorage(item) {
   const itemsFromStorage = getItemsFromStorage();
-
-  
-  // Add new item to array
-  itemsFromStorage.push(item);
-
-  // Convert to JSON string and set to localStorage
+  itemsFromStorage.push({ name: item, bought: false });
   localStorage.setItem('items', JSON.stringify(itemsFromStorage));
 }
 
 function getItemsFromStorage() {
   let itemsFromStorage;
-
-    if (localStorage.getItem('items') === null) {
+  if (localStorage.getItem('items') === null) {
     itemsFromStorage = [];
   } else {
     itemsFromStorage = JSON.parse(localStorage.getItem('items'));
@@ -107,16 +122,37 @@ function getItemsFromStorage() {
 }
 
 function onClickItem(e) {
-    if (e.target.parentElement.classList.contains('remove-item')) {
-      removeItem(e.target.parentElement.parentElement);
-    } else {
-      setItemToEdit(e.target);
-    }
+  if (e.target.parentElement.classList.contains('remove-item')) {
+    removeItem(e.target.parentElement.parentElement);
+  } else if (e.target.parentElement.classList.contains('tick-item')) {
+    toggleBought(e.target.parentElement.parentElement);
+  } else {
+    setItemToEdit(e.target);
+  }
+}
+
+function toggleBought(itemLi) {
+  itemLi.classList.toggle('bought');
+  const tickBtn = itemLi.querySelector('.tick-item');
+  if (itemLi.classList.contains('bought')) {
+    tickBtn.innerHTML = '<i class="fa-solid fa-check text-green"></i>';
+  } else {
+    tickBtn.innerHTML = '<i class="fa-regular fa-circle"></i>';
+  }
+  updateBoughtInStorage(itemLi.firstChild.textContent, itemLi.classList.contains('bought'));
+}
+
+function updateBoughtInStorage(itemName, bought) {
+  let itemsFromStorage = getItemsFromStorage();
+  itemsFromStorage = itemsFromStorage.map((obj) =>
+    obj.name === itemName ? { ...obj, bought } : obj
+  );
+  localStorage.setItem('items', JSON.stringify(itemsFromStorage));
 }
 
 function checkIfItemExists(item) {
   const itemsFromStorage = getItemsFromStorage();
-  return itemsFromStorage.includes(item);
+  return itemsFromStorage.some(obj => obj.name === item);
 }
 
 function setItemToEdit(item) {
@@ -145,11 +181,7 @@ function removeItem(item) {
 }
 function removeItemFromStorage(item) {
   let itemsFromStorage = getItemsFromStorage();
-
-  // Filter out the item to be removed
-  itemsFromStorage = itemsFromStorage.filter((i) => i !== item);
-  
-  // Re-set to localStorage
+  itemsFromStorage = itemsFromStorage.filter((obj) => obj.name !== item);
   localStorage.setItem('items', JSON.stringify(itemsFromStorage));
 }
 
@@ -211,5 +243,6 @@ function init() {
   checkUI();
 
 }
+
 
 init();
